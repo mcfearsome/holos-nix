@@ -20,7 +20,7 @@
       in {
         packages.default = pkgs.buildGoModule {
           pname = "holos";
-          version = "0.102.5";
+          version = "0.103.0";
 
           src = holos-src;
 

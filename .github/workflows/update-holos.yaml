@@ -36,7 +36,12 @@ jobs:
         if: steps.check-release.outputs.update_needed == 'true'
         run: |
           NEW_VERSION=${{ steps.check-release.outputs.latest_version }}
-          sed -i "s/version = \".*\";/version = \"${NEW_VERSION}\";/" flake.nix
+          # Remove 'v' prefix for package version
+          VERSION_NO_V=${NEW_VERSION#v}
+          # Update version in package definition (without 'v' prefix)
+          sed -i "s/version = \".*\";/version = \"${VERSION_NO_V}\";/" flake.nix
+          # Update version in holos-src input URL (with 'v' prefix)
+          sed -i "s|url = \"github:holos-run/holos/.*\";|url = \"github:holos-run/holos/${NEW_VERSION}\";|" flake.nix
           
           # Try to build and get new SHA
           nix build
