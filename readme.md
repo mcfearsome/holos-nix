@@ -5,7 +5,7 @@
  
 [![FlakeHub](https://img.shields.io/endpoint?url=https://flakehub.com/f/mcfearsome/holos/badge)](https://flakehub.com/flake/mcfearsome/holos)
  
-Add `holos-nix` to your `flake.nix`:
+Add `holos` to your `flake.nix`:
  
 ```nix
 {
