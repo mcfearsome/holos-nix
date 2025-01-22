@@ -2,6 +2,7 @@
   description = "Holos - Holistic platform manager";
 
   inputs = {
+    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/0.1";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     holos-src = {
@@ -10,7 +11,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, holos-src }:
+  outputs = { self, nixpkgs, flake-utils, holos-src, determinate }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -42,6 +43,7 @@
             go
             gopls
             go-tools
+            self.packages.${system}.default
           ];
         };
       }
