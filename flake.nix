@@ -4,61 +4,44 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-      };
+    holos-src = {
+      url = "github:holos-run/holos/v0.103.0";
+      flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
+  outputs = { self, nixpkgs, flake-utils, holos-src }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system overlays;
+          inherit system;
         };
-        
-        rustToolchain = pkgs.rust-bin.stable.latest.default;
-
       in {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
+        packages.default = pkgs.buildGoModule {
           pname = "holos";
-          version = "0.97.2";  # Current version as of the documentation
+          version = "0.103.0";
 
-          src = pkgs.fetchFromGitHub {
-            owner = "holos-run";
-            repo = "holos";
-            rev = "v0.97.2";  # Use the specific version tag
-            sha256 = ""; # You'll need to replace this with the actual hash
+          src = holos-src;
+
+          vendorHash = "sha256-83Y69ri3zJB4S5OY1RjFlCnBlyPS2OwSTre6iQ5Zm/o=";
+
+          subPackages = [ "cmd/holos" ];
+
+          doCheck = false;
+          
+          meta = with pkgs.lib; {
+            description = "Holistic platform manager";
+            homepage = "https://github.com/holos-run/holos";
+            license = licenses.asl20;
+            maintainers = [ ];
           };
-
-          cargoLock = {
-            lockFile = "${self}/Cargo.lock";
-            outputHashes = {
-              # Add any private dependencies here if needed
-            };
-          };
-
-          nativeBuildInputs = with pkgs; [
-            rustToolchain
-            pkg-config
-          ];
-
-          buildInputs = with pkgs; [
-            openssl
-          ];
-
-          doCheck = true;  # Run tests during the build
         };
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            rustToolchain
-            pkg-config
-            openssl
+            go
+            gopls
+            go-tools
           ];
         };
       }
