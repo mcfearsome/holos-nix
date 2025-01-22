@@ -1,0 +1,57 @@
+name: Update Holos Version
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  update-holos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Check for new Holos release
+        id: check-release
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/holos-run/holos/releases/latest | jq -r .tag_name)
+          echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+          CURRENT_VERSION=$(grep 'version = ".*";' flake.nix | sed 's/.*version = "\(.*\)";.*/\1/')
+          echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update flake.nix
+        if: steps.check-release.outputs.update_needed == 'true'
+        run: |
+          NEW_VERSION=${{ steps.check-release.outputs.latest_version }}
+          sed -i "s/version = \".*\";/version = \"${NEW_VERSION}\";/" flake.nix
+          
+          # Try to build and get new SHA
+          nix build
+          NEW_SHA=$(nix-prefetch-url --unpack https://github.com/holos-run/holos/archive/refs/tags/${NEW_VERSION}.tar.gz)
+          sed -i "s/sha256 = \".*\";/sha256 = \"${NEW_SHA}\";/" flake.nix
+
+      - name: Create Pull Request
+        if: steps.check-release.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "chore: update holos to ${{ steps.check-release.outputs.latest_version }}"
+          title: "Update Holos to ${{ steps.check-release.outputs.latest_version }}"
+          body: |
+            Automated update of Holos version to ${{ steps.check-release.outputs.latest_version }}
+            
+            This PR was automatically created by the update-holos workflow.
+          branch: update-holos-version
+          delete-branch: true
